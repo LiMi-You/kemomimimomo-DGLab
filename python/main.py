@@ -20,27 +20,23 @@ class PulseManager:
             Channel.A: {'lastdata': [], 'nextdata': []},
             Channel.B: {'lastdata': [], 'nextdata': []}
         }
-        self.sending_task = None
-        self.paused = False
-        self.clients = set()
+        self.client_tasks = {}
 
-    async def pulse_task(self):
+    async def pulse_task(self, client):
         try:
-            while not self.paused:
+            while True:
                 try:
                     address, normalize = normalized_queue.get_nowait()
                     channel = Channel.A if 'left' in address else Channel.B if 'right' in address else None
                     if channel:
-                        self.process_channel_data(channel, int(normalize))
+                        self.process_channel_data(channel, int(normalize), client)
                 except Empty:
                     await asyncio.sleep(0.01)  # Short sleep to yield control and prevent busy waiting
                 await asyncio.sleep(0.01)
         except asyncio.CancelledError:
-            logging.info("Pulse task was cancelled.")
-        finally:
-            self.sending_task = None
+            logging.info(f"Pulse task for client {client} was cancelled.")
 
-    def process_channel_data(self, channel, normalize):
+    def process_channel_data(self, channel, normalize, client):
         channel_data = self.data[channel]
         if len(channel_data['nextdata']) < 4:
             channel_data['nextdata'].append(normalize)
@@ -48,32 +44,22 @@ class PulseManager:
             if len(channel_data['lastdata']) > 0:
                 logging.info(f"Channel {channel} last: {channel_data['lastdata']}")
                 logging.info(f"Channel {channel} next: {channel_data['nextdata']}")
-                # Broadcast data to all clients
-                for client in self.clients:
-                    # Simulate sending data to client
-                    pass
+                # Simulate sending data to client
+                # Here you would send the data to the specific client
             channel_data['lastdata'] = copy.copy(channel_data['nextdata'])
             channel_data['nextdata'].clear()
 
-    def start_sending(self):
-        self.paused = False
-        if self.sending_task is None or self.sending_task.done():
-            self.sending_task = asyncio.create_task(self.pulse_task())
-            logging.info("Started sending task.")
+    def start_sending(self, client):
+        if client not in self.client_tasks or self.client_tasks[client].done():
+            task = asyncio.create_task(self.pulse_task(client))
+            self.client_tasks[client] = task
+            logging.info(f"Started sending task for client {client}.")
 
-    def stop_sending(self):
-        self.paused = True
-        if self.sending_task is not None:
-            self.sending_task.cancel()
-            logging.info("Stopped sending task.")
-
-    def add_client(self, client):
-        self.clients.add(client)
-        logging.info(f"Client {client} added.")
-
-    def remove_client(self, client):
-        self.clients.discard(client)
-        logging.info(f"Client {client} removed.")
+    def stop_sending(self, client):
+        if client in self.client_tasks:
+            self.client_tasks[client].cancel()
+            del self.client_tasks[client]
+            logging.info(f"Stopped sending task for client {client}.")
 
 def print_qrcode(data: str):
     qr = qrcode.QRCode()
@@ -88,7 +74,6 @@ async def dglab_websocket():
     pulse_manager = PulseManager()
     async with DGLabWSServer("0.0.0.0", 5678, 60) as server:
         client = server.new_local_client()
-        pulse_manager.add_client(client)
         url2 = client.get_qrcode("ws://192.168.31.247:5678")
         logging.info("请用 DG-Lab App 扫描二维码以连接")
         print_qrcode(url2)
@@ -102,17 +87,16 @@ async def dglab_websocket():
 
             if data == FeedbackButton.A1:
                 logging.info("对方按下了 A 通道圆圈按钮，开始发送波形")
-                pulse_manager.start_sending()
+                pulse_manager.start_sending(client)
 
             elif data == FeedbackButton.A2:
                 logging.info("对方按下了 A 通道暂停按钮，暂停发送波形")
-                pulse_manager.stop_sending()
+                pulse_manager.stop_sending(client)
 
             elif data == RetCode.CLIENT_DISCONNECTED:
                 logging.info("App 已断开连接，你可以尝试重新扫码进行连接绑定")
-                pulse_manager.remove_client(client)
+                pulse_manager.stop_sending(client)
                 await client.rebind()
-                pulse_manager.add_client(client)
                 logging.info("重新绑定成功")
 
 async def main():
