@@ -93,10 +93,8 @@ async def dglab_websocket():
     pulse_manager = PulseManager()
     async with DGLabWSServer("0.0.0.0", 5678, 60) as server:
         client = server.new_local_client()
-        url = client.get_qrcode("ws://www.kcm-nixi.cn:35678")
         url2 = client.get_qrcode("ws://192.168.31.247:5678")
         print("请用 DG-Lab App 扫描二维码以连接")
-        print_qrcode(url)
         print_qrcode(url2)
 
         await client.bind()
