@@ -1,9 +1,10 @@
 from pythonosc import dispatcher, osc_server
-from threading import Thread, Lock
+from threading import Thread
+import asyncio
+import logging
 from time import time
 from collections import deque
-from shared_resources import normalized_queue  # 导入队列
-import asyncio
+from shared_resources import normalized_queue
 
 class OSCServer:
     def __init__(self, ip, port):
@@ -11,7 +12,7 @@ class OSCServer:
         self.port = port
         self.data_store = {}
         self.acceleration_window = {}
-        self.lock = Lock()
+        self.server_thread = None
 
     def normalize_and_map(self, x):
         min_original = 10
@@ -28,66 +29,38 @@ class OSCServer:
         current_value = args[0]
         current_time = time()
 
-        with self.lock:
-            self.data_store.setdefault(address, []).append((current_value, current_time))
-            if len(self.data_store[address]) > 2:
-                self.data_store[address].pop(0)
+        # Store the latest value and time
+        self.data_store[address] = (current_value, current_time)
 
-    async def sample_data(self):
-        while True:
-            current_time = time()
-            addresses_to_remove = []
+        # Calculate acceleration if possible
+        if address in self.acceleration_window and len(self.acceleration_window[address]) >= 1:
+            prev_value, prev_time = self.acceleration_window[address][-1]
+            delta_t = current_time - prev_time
+            if delta_t > 0:
+                acceleration = (current_value - prev_value) / delta_t
+                normalized_value = self.normalize_and_map(abs(acceleration))
+                normalized_queue.put((address, normalized_value))
+        else:
+            # Initialize deque for new addresses
+            self.acceleration_window[address] = deque(maxlen=2)
 
-            for address, values in self.data_store.items():
-                if not values:
-                    continue
-
-                last_value, last_time = values[-1] if values else (None, None)
-
-                if last_time is None or current_time - last_time > 0.025:
-                    current_value = 0
-                    acceleration_abs = 0
-                else:
-                    current_value = last_value
-
-                    if len(values) == 2:
-                        prev_value, prev_time = values[0]
-                        delta_t = current_time - prev_time
-
-                        if delta_t != 0:
-                            velocity_change = (current_value - prev_value) / delta_t
-                            acceleration = velocity_change / delta_t if delta_t != 0 else 0
-                            acceleration_abs = abs(acceleration)
-                        else:
-                            acceleration_abs = 0
-                    else:
-                        acceleration_abs = 0
-
-                with self.lock:
-                    if address not in self.acceleration_window:
-                        self.acceleration_window[address] = deque(maxlen=5)
-                    self.acceleration_window[address].append(acceleration_abs)
-
-                    filtered_acceleration = sum(self.acceleration_window[address]) / len(self.acceleration_window[address])
-                    normalize = self.normalize_and_map(filtered_acceleration)
-                    normalized_queue.put((address, normalize))
-
-                if len(values) > 1 and current_time - values[0][1] > 0.025:
-                    self.data_store[address].pop(0)
-
-            await asyncio.sleep(0.025)
+        # Update the acceleration window
+        self.acceleration_window[address].append((current_value, current_time))
 
     def start(self):
         disp = dispatcher.Dispatcher()
         disp.map("/avatar/parameters/ear_touch_*", self.print_handler)
 
         server = osc_server.ThreadingOSCUDPServer((self.ip, self.port), disp)
-        print(f"Serving on {server.server_address}")
+        logging.info(f"Serving on {server.server_address}")
 
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.sample_data())
-        server_thread = Thread(target=server.serve_forever, daemon=True)
-        server_thread.start()
+        self.server_thread = Thread(target=server.serve_forever, daemon=True)
+        self.server_thread.start()
+
+    def stop(self):
+        if self.server_thread:
+            self.server_thread.join()
+            logging.info("OSC server stopped.")
 
 def start_osc_server(ip, port):
     osc_server = OSCServer(ip, port)
