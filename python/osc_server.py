@@ -15,8 +15,8 @@ class OSCServer:
         self.server_thread = None
 
     def normalize_and_map(self, x):
-        min_original = 10
-        max_original = 450
+        min_original = 1
+        max_original = 15
         min_new = 0
         max_new = 100
 
@@ -39,6 +39,7 @@ class OSCServer:
             if delta_t > 0:
                 acceleration = (current_value - prev_value) / delta_t
                 normalized_value = self.normalize_and_map(abs(acceleration))
+                # print(abs(acceleration))
                 normalized_queue.put((address, normalized_value))
         else:
             # Initialize deque for new addresses
