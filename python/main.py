@@ -10,6 +10,8 @@ from config_manager import ConfigManager
 from pydglab_ws import FeedbackButton, Channel, RetCode, DGLabWSServer
 import time
 import copy
+import tkinter as tk
+from tkinter import scrolledtext, font
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -63,27 +65,67 @@ class PulseManager:
             del self.client_tasks[client]
             logging.info(f"Stopped sending task for client {client}.")
 
-def print_qrcode(data: str):
-    qr = qrcode.QRCode()
-    qr.add_data(data)
-    qr.make(fit=True)
-    f = io.StringIO()
-    qr.print_ascii(out=f, invert=True)
-    f.seek(0)
-    print(f.read())
+class AppGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("ケモミミもも郊狼控制台")
+        
+        # 设置等宽字体
+        self.mono_font = font.Font(family="Courier", size=10)
+        
+        # 创建日志显示区域
+        self.log_area = scrolledtext.ScrolledText(root, state='disabled', font=self.mono_font)
+        self.log_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        
+        # 重定向日志输出到GUI
+        self.redirect_logging()
 
-async def dglab_websocket():
+    def redirect_logging(self):
+        class LogHandler(logging.Handler):
+            def __init__(self, text_widget):
+                super().__init__()
+                self.text_widget = text_widget
+
+            def emit(self, record):
+                msg = self.format(record)
+                self.text_widget.configure(state='normal')
+                self.text_widget.insert(tk.END, msg + '\n')
+                self.text_widget.configure(state='disabled')
+                self.text_widget.yview(tk.END)
+
+        log_handler = LogHandler(self.log_area)
+        log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logging.getLogger().addHandler(log_handler)
+
+    def insert_qrcode(self, data):
+        """生成 ASCII 格式的二维码并插入到日志文本中"""
+        qr = qrcode.QRCode()
+        qr.add_data(data)
+        qr.make(fit=True)
+
+        # 生成 ASCII 格式的二维码
+        f = io.StringIO()
+        qr.print_ascii(out=f, invert=False)  # 使用 invert=True 提高对比度
+        f.seek(0)
+        ascii_qr = f.read()
+
+        # 在日志文本中插入二维码
+        self.log_area.configure(state='normal')
+        self.log_area.insert(tk.END, "二维码:\n")
+        self.log_area.insert(tk.END, ascii_qr + '\n')
+        self.log_area.configure(state='disabled')
+        self.log_area.yview(tk.END)  # 自动滚动到底部
+
+async def dglab_websocket(gui):
     pulse_manager = PulseManager()
     async with DGLabWSServer(config.host, config.port, 60) as server:
         client = server.new_local_client()
         logging.info("请用 DG-Lab App 扫描二维码以连接")
         for socket_url in config.socket_urls:
            url = client.get_qrcode(socket_url)
-           print_qrcode(url)
-           print(f"上面二维码的地址是{url}")
+           gui.insert_qrcode(url)  # 插入 ASCII 二维码到日志文本中
+           logging.info(f"上面二维码的地址是: {url}")
         
-
-
         await client.bind()
         logging.info(f"已与 App {client.target_id} 成功绑定")
 
@@ -105,14 +147,23 @@ async def dglab_websocket():
                 await client.rebind()
                 logging.info("重新绑定成功")
 
-async def main():
+async def main(gui):
     ip = config.osc_host
     port = config.osc_port
 
     osc_server = OSCServer(ip, port)
     osc_server.start()
 
-    await dglab_websocket()
+    await dglab_websocket(gui)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    root = tk.Tk()
+    gui = AppGUI(root)
+    
+    def run_asyncio():
+        asyncio.run(main(gui))
+
+    import threading
+    threading.Thread(target=run_asyncio, daemon=True).start()
+    
+    root.mainloop()
