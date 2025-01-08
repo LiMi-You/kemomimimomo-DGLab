@@ -6,13 +6,14 @@ import asyncio
 import io
 import qrcode
 import logging
-
+from config_manager import ConfigManager
 from pydglab_ws import FeedbackButton, Channel, RetCode, DGLabWSServer
 import time
 import copy
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+config = ConfigManager()
 
 class PulseManager:
     def __init__(self):
@@ -73,11 +74,15 @@ def print_qrcode(data: str):
 
 async def dglab_websocket():
     pulse_manager = PulseManager()
-    async with DGLabWSServer("0.0.0.0", 5678, 60) as server:
+    async with DGLabWSServer(config.host, config.port, 60) as server:
         client = server.new_local_client()
-        url2 = client.get_qrcode("ws://192.168.31.247:5678")
         logging.info("请用 DG-Lab App 扫描二维码以连接")
-        print_qrcode(url2)
+        for socket_url in config.socket_urls:
+           url = client.get_qrcode(socket_url)
+           print_qrcode(url)
+           print(f"上面二维码的地址是{url}")
+        
+
 
         await client.bind()
         logging.info(f"已与 App {client.target_id} 成功绑定")
@@ -101,8 +106,8 @@ async def dglab_websocket():
                 logging.info("重新绑定成功")
 
 async def main():
-    ip = "127.0.0.1"
-    port = 9001
+    ip = config.osc_host
+    port = config.osc_port
 
     osc_server = OSCServer(ip, port)
     osc_server.start()

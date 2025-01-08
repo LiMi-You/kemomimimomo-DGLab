@@ -5,7 +5,8 @@ import logging
 from time import time
 from collections import deque
 from shared_resources import normalized_queue
-
+from config_manager import ConfigManager
+config = ConfigManager()
 class OSCServer:
     def __init__(self, ip, port):
         self.ip = ip
@@ -15,8 +16,8 @@ class OSCServer:
         self.server_thread = None
 
     def normalize_and_map(self, x):
-        min_original = 1
-        max_original = 15
+        min_original = config.min_original
+        max_original = config.max_original
         min_new = 0
         max_new = 100
 
