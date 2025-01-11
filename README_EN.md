@@ -23,7 +23,7 @@ Experience realistic haptic feedback through VRChat touch interactions.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/你的用户名/项目名.git
+git clone https://github.com/ggg123124/kemomimimomo-DGLab
 ```
 2. Install dependencies:
 ```bash
