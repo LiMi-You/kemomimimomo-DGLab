@@ -60,4 +60,4 @@ Pull Requests and Issues are welcome to help improve the project.
 
 ## License
 
-[License Type]
+MIT License

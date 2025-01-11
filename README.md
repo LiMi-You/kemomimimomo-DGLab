@@ -59,5 +59,5 @@ python main.py
 
 ## 许可证
 
-[许可证类型]
+MIT License
 
