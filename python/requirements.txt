@@ -1,0 +1,6 @@
+python-osc
+qrcode[pil]
+pyyaml
+asyncio
+pydglab-ws
+pillow

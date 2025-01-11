@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python 调试程序",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/Python"
+        }
+    ]
+}
