@@ -16,8 +16,24 @@
 - 郊狼 3.0 设备
 - VRChat 账号
 - 支持 MA 的 Avatar
+- Python 3.8 或更高版本
 
-## 安装说明
+## 程序安装
+
+1. 克隆仓库到本地：
+```bash
+git clone https://github.com/你的用户名/项目名.git
+```
+2. 安装依赖包：
+```bash
+pip install -r requirements.txt
+```
+3. 运行主程序：
+```bash
+python main.py
+```
+
+## Avatar 安装说明
 
 1. 下载最新版本的预制件
 2. 将预制件导入到你的 Avatar 项目中
