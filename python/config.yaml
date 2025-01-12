@@ -15,5 +15,5 @@ osc_host: 127.0.0.1
 # vrchat的osc端口号
 osc_port: 9001
 # 归一化参数
-min_original: 1
-max_original: 15
+min_original: 0.2
+max_original: 10

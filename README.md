@@ -15,7 +15,7 @@
 
 - 郊狼 3.0 设备
 - VRChat 账号
-- 支持 MA 的 Avatar
+- VCC需要安装MA插件
 - Python 3.8 或更高版本
 
 ## 程序安装
@@ -28,7 +28,14 @@ git clone https://github.com/ggg123124/kemomimimomo-DGLab
 ```bash
 pip install -r requirements.txt
 ```
-3. 运行主程序：
+3. 修改`config.yaml`文件中的socket_urls地址，支持多个地址，用于内外网监听，如果你需要暴露到公网上让远端的设备连接的话记得检查你的防火墙以及端口转发
+````
+socket_urls: 
+  - ws://192.168.1.123:5678
+  - ws://url:5678
+````
+
+4. 运行主程序：
 ```bash
 python main.py
 ```
@@ -37,7 +44,7 @@ python main.py
 
 1. 下载最新版本的预制件
 2. 将预制件导入到你的 Avatar 项目中
-3. 将触发器组件放置到需要触觉反馈的位置
+3. 将触发器组件放置到需要触觉反馈的位置，记得绑骨别绑错地方
 4. 确保所有变量名与预制件保持一致
 
 ## 使用方法

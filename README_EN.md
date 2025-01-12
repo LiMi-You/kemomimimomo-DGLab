@@ -15,7 +15,7 @@ Experience realistic haptic feedback through VRChat touch interactions.
 
 - Coyote 3.0 Device
 - VRChat Account
-- MA-compatible Avatar
+- VCC install MA plugin
 - Python 3.8 or higher
 - WebSocket support
 
