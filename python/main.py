@@ -105,7 +105,7 @@ class AppGUI:
 
         # 生成 ASCII 格式的二维码
         f = io.StringIO()
-        qr.print_ascii(out=f, invert=False)  # 使用 invert=True 提高对比度
+        qr.print_ascii(out=f, invert=False)  
         f.seek(0)
         ascii_qr = f.read()
 
