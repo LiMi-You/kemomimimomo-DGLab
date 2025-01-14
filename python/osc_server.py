@@ -44,7 +44,7 @@ class OSCServer:
             return "Error: Cannot take the square root of a negative number."
         
         y = frequency_constant_a + math.sqrt(under_sqrt)
-        return int(1000/self.normalize_and_map(x,0,100,0,500))
+        return int(1000/self.normalize_and_map(x,0,100,1,500))
 
         
 
