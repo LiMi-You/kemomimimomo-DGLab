@@ -20,7 +20,7 @@ class PulseManager:
                     address, normalize = normalized_queue.get_nowait()
                     channel = Channel.A if 'left' in address else Channel.B if 'right' in address else None
                     if channel:
-                       await self.process_channel_data(channel, int(normalize), client)
+                       await self.process_channel_data(channel, normalize, client)
                 except Empty:
                     await asyncio.sleep(0.01)  # Short sleep to yield control and prevent busy waiting
                 await asyncio.sleep(0.01)
@@ -37,7 +37,7 @@ class PulseManager:
                 logging.info(f"Channel {channel} next: {channel_data['nextdata']}")
                 # Simulate sending data to client
                 # Here you would send the data to the specific client
-                await client.add_pulses(channel, *[((10, 10, 10, 10), channel_data['lastdata']), ((10, 10, 10, 10), channel_data['nextdata'])])
+                await client.add_pulses(channel, *[((item[1] for item in channel_data['lastdata']), (item[0] for item in channel_data['lastdata'])), ((item[1] for item in  channel_data['nextdata']), (item[0] for item in  channel_data['nextdata']))])
             channel_data['lastdata'] = copy.copy(channel_data['nextdata'])
             channel_data['nextdata'].clear()
 

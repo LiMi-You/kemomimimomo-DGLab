@@ -17,3 +17,7 @@ osc_port: 9001
 # 归一化参数
 min_original: 0.2
 max_original: 10
+#频率曲线参数
+frequency_constant_p: 50
+frequency_constant_a: 0
+frequency_constant_b: 0

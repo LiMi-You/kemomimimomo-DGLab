@@ -6,6 +6,7 @@ from time import time
 from collections import deque
 from shared_resources import normalized_queue
 from config_manager import ConfigManager
+import math
 config = ConfigManager()
 class OSCServer:
     def __init__(self, ip, port):
@@ -25,6 +26,30 @@ class OSCServer:
         y = ((x - min_original) / (max_original - min_original)) * (max_new - min_new) + min_new
         return y
 
+    def normalize_and_map(self, x,min_original,max_original,min_new,max_new):
+        x = max(min(x, max_original), min_original)
+        y = ((x - min_original) / (max_original - min_original)) * (max_new - min_new) + min_new
+        return y
+    
+    def frequency(self,x,min_original,max_original):
+        frequency_constant_p = config.frequency_constant_p
+        frequency_constant_a = config.frequency_constant_a
+        frequency_constant_b = config.frequency_constant_b
+
+        y = self.normalize_and_map(x,min_original,max_original,0,100)
+
+           # 首先检查2px - b^2是否非负，因为不能对负数开平方
+        under_sqrt = 2 * frequency_constant_p * y - frequency_constant_b**2
+        if under_sqrt < 0:
+            return "Error: Cannot take the square root of a negative number."
+        
+        y = frequency_constant_a + math.sqrt(under_sqrt)
+        return self.normalize_and_map(x,0,100,0,500)
+
+        
+
+
+
     def print_handler(self, address, *args):
         address = address.replace("$", "")
         current_value = args[0]
@@ -39,9 +64,10 @@ class OSCServer:
             delta_t = current_time - prev_time
             if delta_t > 0:
                 acceleration = (current_value - prev_value) / delta_t
-                normalized_value = self.normalize_and_map(abs(acceleration))
+                normalized_value = self.normalize_and_map(abs(acceleration),config.min_original,config.max_original,0,100)
+                frequency_value = self.frequency(abs(acceleration),config.min_original,config.max_original)
                 # print(abs(acceleration))
-                normalized_queue.put((address, normalized_value))
+                normalized_queue.put((address, (normalized_value,frequency_value)))
         else:
             # Initialize deque for new addresses
             self.acceleration_window[address] = deque(maxlen=2)
