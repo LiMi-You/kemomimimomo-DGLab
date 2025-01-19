@@ -24,15 +24,25 @@ async def main(gui):
 
     # 启动DGLab websocket服务器
     async with DGLabWSServer(config.host, config.port, 60) as server:
-        client = server.new_local_client()
-        
-        # 生成二维码
+        clients = []  # 用于存储多个客户端
+
+        # 创建多个客户端并生成二维码
         for socket_url in config.socket_urls:
+            client = server.new_local_client()
+            clients.append(client)  # 将客户端添加到列表中
+
+            # 生成二维码
             url = client.get_qrcode(socket_url)
             gui.insert_qrcode(url)
-        
-        # 处理DGLab连接
-        await handle_dglab_connection(server, client, gui, pulse_manager)
+
+        # 为每个客户端启动一个任务来处理连接
+        tasks = []
+        for client in clients:
+            task = asyncio.create_task(handle_dglab_connection(server, client, gui, pulse_manager))
+            tasks.append(task)
+
+        # 等待所有任务完成
+        await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
